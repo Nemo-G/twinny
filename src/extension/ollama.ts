@@ -1,4 +1,5 @@
 import { workspace } from "vscode"
+
 import { TwinnyProvider } from "./provider-manager"
 
 export class OllamaService {
