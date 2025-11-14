@@ -45,7 +45,7 @@ export class BaseProvider {
   private _diffManager = new DiffManager()
   private _embeddingDatabase: EmbeddingDatabase | undefined
   private _fileTreeProvider: FileTreeProvider
-  private _ollamaService: OllamaService | undefined
+  private _inferenceService: OllamaService | undefined
   private _sessionManager: SessionManager | undefined
   private _statusBarItem: vscode.StatusBarItem
   private _symmetryService?: SymmetryService
@@ -73,7 +73,7 @@ export class BaseProvider {
     this.context = context
     this._fileTreeProvider = new FileTreeProvider()
     this._embeddingDatabase = db
-    this._ollamaService = new OllamaService()
+    this._inferenceService = new OllamaService()
     this._sessionManager = sessionManager
     this._statusBarItem = statusBar
     this._templateDir = templateDir
@@ -369,7 +369,7 @@ export class BaseProvider {
 
   private fetchOllamaModels = async () => {
     try {
-      const models = await this._ollamaService?.fetchModels()
+      const models = await this._inferenceService?.fetchModels()
       if (!models?.length) {
         return
       }

@@ -16,7 +16,6 @@ export function createStreamRequestBodyFim(
   }
 ): RequestBodyBase | RequestOptionsOllama | StreamBodyOpenAI {
   switch (provider) {
-    case API_PROVIDERS.OpenAICompatible:
     case API_PROVIDERS.OpenWebUI:
     case API_PROVIDERS.Ollama:
       return {
@@ -32,13 +31,14 @@ export function createStreamRequestBodyFim(
         },
       }
     case API_PROVIDERS.LMStudio:
+    case API_PROVIDERS.OpenAICompatible:
     case API_PROVIDERS.Deepseek:
       return {
         model: options.model,
         prompt,
         stream: true,
-        temperature: options.temperature,
-        max_tokens: options.numPredictFim,
+        temperature: 0.01,// options.temperature,
+        max_tokens: 128,//options.numPredictFim,
       }
     case API_PROVIDERS.LlamaCpp:
     case API_PROVIDERS.Oobabooga:

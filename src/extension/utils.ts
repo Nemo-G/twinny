@@ -430,7 +430,10 @@ export const getFimDataFromProvider = (
     case API_PROVIDERS.OpenAICompatible:
     case API_PROVIDERS.Ollama:
     case API_PROVIDERS.OpenWebUI:
-      return data?.response
+      // OpenAI-compatible APIs return responses in choices array
+      if (!data?.choices?.length) return ""
+      // Check for delta.content (streaming) or text (non-streaming)
+      return data.choices[0].delta?.content || data.choices[0].text || ""
     case API_PROVIDERS.LlamaCpp:
       return data?.content
     case API_PROVIDERS.LiteLLM:

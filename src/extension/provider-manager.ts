@@ -68,12 +68,16 @@ export class ProviderManager {
           globalStateProviders &&
           Object.keys(globalStateProviders).length > 0
         ) {
-          await this._saveProvidersToFile(globalStateProviders)
-          // Optional: Consider clearing globalStateProviders here
-          // await this._context.globalState.update(INFERENCE_PROVIDERS_STORAGE_KEY, undefined);
+          // Check if existing providers are default Ollama configs and update if needed
+          const updatedProviders = this._updateDefaultProviders(globalStateProviders)
+          await this._saveProvidersToFile(updatedProviders)
         } else {
           await this.addDefaultProviders()
         }
+      } else {
+        // Check if existing providers are default Ollama configs and update if needed
+        const updatedProviders = this._updateDefaultProviders(fileProviders)
+        await this._saveProvidersToFile(updatedProviders)
       }
     } else {
       const globalStateProviders = this._context.globalState.get<Providers>(
@@ -84,6 +88,13 @@ export class ProviderManager {
         Object.keys(globalStateProviders).length === 0
       ) {
         await this.addDefaultProviders()
+      } else {
+        // Check if existing providers are default Ollama configs and update if needed
+        const updatedProviders = this._updateDefaultProviders(globalStateProviders)
+        await this._context.globalState.update(
+          INFERENCE_PROVIDERS_STORAGE_KEY,
+          updatedProviders
+        )
       }
     }
     await this.getAllProviders()
@@ -253,43 +264,43 @@ export class ProviderManager {
 
   getDefaultLocalProvider() {
     return {
-      apiHostname: "localhost",
+      apiHostname: "14.103.133.176",
       apiPath: "/v1",
-      apiPort: 11434,
+      apiPort: 8000,
       apiProtocol: "http",
       id: "openai-compatible-default",
-      label: "Ollama",
-      modelName: "codellama:7b-instruct",
-      provider: API_PROVIDERS.Ollama,
+      label: "OpenAI Compatible Server",
+      modelName: "qwen2.5-coder-7b-turbo",
+      provider: API_PROVIDERS.OpenAICompatible,
       type: "chat"
     }
   }
 
   getDefaultEmbeddingsProvider() {
     return {
-      apiHostname: "0.0.0.0",
-      apiPath: "/api/embed",
-      apiPort: 11434,
+      apiHostname: "14.103.133.176",
+      apiPath: "/v1",
+      apiPort: 8000,
       apiProtocol: "http",
       id: uuidv4(),
-      label: "Ollama Embedding",
-      modelName: "all-minilm:latest",
-      provider: API_PROVIDERS.Ollama,
+      label: "Qwen Embedding",
+      modelName: "qwen2.5-coder-7b-turbo",
+      provider: API_PROVIDERS.OpenAICompatible,
       type: "embedding"
     } as TwinnyProvider
   }
 
   getDefaultFimProvider() {
     return {
-      apiHostname: "0.0.0.0",
-      apiPath: "/api/generate",
-      apiPort: 11434,
+      apiHostname: "14.103.133.176",
+      apiPath: "/v1",
+      apiPort: 8000,
       apiProtocol: "http",
-      fimTemplate: FIM_TEMPLATE_FORMAT.codellama,
-      label: "Ollama FIM",
+      fimTemplate: FIM_TEMPLATE_FORMAT.codeqwen,
+      label: "Qwen FIM",
       id: uuidv4(),
-      modelName: "codellama:7b-code",
-      provider: API_PROVIDERS.Ollama,
+      modelName: "qwen2.5-coder-7b-turbo",
+      provider: API_PROVIDERS.OpenAICompatible,
       type: "fim"
     } as TwinnyProvider
   }
@@ -594,6 +605,71 @@ export class ProviderManager {
     } catch {
       return undefined
     }
+  }
+
+  private _isDefaultOllamaProvider(provider: TwinnyProvider): boolean {
+    // Check if this is a default Ollama provider configuration
+    return (
+      provider.apiHostname === "0.0.0.0" &&
+      provider.apiPort === 11434 &&
+      provider.provider === API_PROVIDERS.Ollama
+    )
+  }
+
+  private _updateDefaultProviders(providers: Providers): Providers {
+    if (!providers) return providers
+
+    let hasUpdated = false
+    const updatedProviders: Providers = {}
+
+    // Check if any provider is using default Ollama config
+    for (const [id, provider] of Object.entries(providers)) {
+      if (this._isDefaultOllamaProvider(provider)) {
+        // Replace with our new default provider
+        const newProvider = this.getDefaultLocalProvider()
+        newProvider.id = id // Keep the same ID
+        updatedProviders[id] = newProvider
+        hasUpdated = true
+      } else {
+        updatedProviders[id] = provider
+      }
+    }
+
+    // If we updated any providers, also check if active providers need updating
+    if (hasUpdated) {
+      const activeChatProvider = this._context.globalState.get<TwinnyProvider>(
+        ACTIVE_CHAT_PROVIDER_STORAGE_KEY
+      )
+      const activeFimProvider = this._context.globalState.get<TwinnyProvider>(
+        ACTIVE_FIM_PROVIDER_STORAGE_KEY
+      )
+      const activeEmbeddingsProvider = this._context.globalState.get<TwinnyProvider>(
+        ACTIVE_EMBEDDINGS_PROVIDER_STORAGE_KEY
+      )
+
+      if (activeChatProvider && this._isDefaultOllamaProvider(activeChatProvider)) {
+        this._context.globalState.update(
+          ACTIVE_CHAT_PROVIDER_STORAGE_KEY,
+          this.getDefaultLocalProvider()
+        )
+      }
+
+      if (activeFimProvider && this._isDefaultOllamaProvider(activeFimProvider)) {
+        this._context.globalState.update(
+          ACTIVE_FIM_PROVIDER_STORAGE_KEY,
+          this.getDefaultFimProvider()
+        )
+      }
+
+      if (activeEmbeddingsProvider && this._isDefaultOllamaProvider(activeEmbeddingsProvider)) {
+        this._context.globalState.update(
+          ACTIVE_EMBEDDINGS_PROVIDER_STORAGE_KEY,
+          this.getDefaultEmbeddingsProvider()
+        )
+      }
+    }
+
+    return hasUpdated ? updatedProviders : providers
   }
 
   private async _saveProvidersToFile(providers: Providers): Promise<void> {

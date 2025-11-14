@@ -23,15 +23,15 @@ export const API_PROVIDERS = {
 }
 
 export const DEFAULT_PROVIDER_FORM_VALUES = {
-  apiHostname: "0.0.0.0",
+  apiHostname: "14.103.133.176",
   apiKey: "",
-  apiPath: "",
-  apiPort: 11434,
+  apiPath: "/v1",
+  apiPort: 8000,
   apiProtocol: "http",
   id: "",
   label: "",
   modelName: "",
   name: "",
-  provider: "ollama",
+  provider: "openai-compatible",
   type: "chat"
 }
